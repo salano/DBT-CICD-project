@@ -3,9 +3,9 @@ name: dbt CI/CD
 on:
   #Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: ["main"]
+    branches: ["Main"]
   pull_request:
-    branches: ["main"]
+    branches: ["Main"]
 
   # Allows you to run this workflow manually from the actions tabs.
   workflow_dispatch:
