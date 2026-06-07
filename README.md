@@ -77,3 +77,12 @@ After, the DBT tests and build jobs, we progress to the staging and then the pro
 
 On a merge to main branch from a feature branch pull request. We can see the logs
 After, the DBT tests and build jobs, we progress to the developement environment for code merging and review.
+
+Create a feature branch and create a pull request
+
+![ALT](cicd_pull_request.png)
+![ALT](cicd_create_pull_request.png)
+
+After successfully merging the feature branch into the main branch triggers a deployment to the staging environment.
+
+![ALT](pull_request_success.png)
