@@ -61,4 +61,5 @@ On push to main branch. We can see the logs
 ![ALT](cicd_test.png)
 ![ALT](cicd_slim_success.png)
 
-Needs updaing to full CI/CD pipeline
+Need to update CICD pipeline workflow
+
