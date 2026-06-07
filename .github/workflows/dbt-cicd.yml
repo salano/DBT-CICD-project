@@ -107,7 +107,7 @@ jobs:
 
   DeployStaging:
     name: Deploy to Staging
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/Main'
     needs: [dbt_build]
     runs-on: ubuntu-latest
     environment:
@@ -124,6 +124,7 @@ jobs:
   DeployProd:
     name: Deploy to Production
     needs: [DeployStaging]
+    if: github.ref == 'refs/heads/Main'
     runs-on: ubuntu-latest
     environment:
       name: Production
