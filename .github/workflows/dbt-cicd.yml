@@ -1,7 +1,7 @@
 name: dbt CI/CD
 #Controls when the action will run
 on:
-  #Triggers the workflow on push or pull request events but only for the main branch
+  #Triggers the workflow on push or pull request events but only for the Main branch
   push:
     branches: ["Main"]
   pull_request:
@@ -98,8 +98,16 @@ jobs:
       name: DEV
       #url: 'optional url link'
     steps:
+      - uses: actions/checkout@v4
+
+      # Populate dist/ from the dbt build artifacts before uploading
+      - name: Download dbt build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dbt-target
+          path: dist/
+
       - name: Deploy to Development
-        #upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Development-build
@@ -114,8 +122,16 @@ jobs:
       name: STAG
       #url: 'optional url link'
     steps:
-      - name: Deploying to Staging
-        #upload artifacts
+      - uses: actions/checkout@v4
+
+      # Populate dist/ from the dbt build artifacts before uploading
+      - name: Download dbt build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dbt-target
+          path: dist/
+
+      - name: Deploy to Staging
         uses: actions/upload-artifact@v4
         with:
           name: Staging-build
@@ -124,27 +140,30 @@ jobs:
   DeployProd:
     name: Deploy to Production
     needs: [DeployStaging]
-    if: github.ref == 'refs/heads/Main'
+    # always() ensures this condition is evaluated even if DeployStaging was skipped
+    # needs.DeployStaging.result == 'success' ensures we only run if Staging actually succeeded
+    if: |
+      always() &&
+      needs.DeployStaging.result == 'success' &&
+      github.ref == 'refs/heads/Main'
     runs-on: ubuntu-latest
     environment:
       name: Production
-      #url: 'optional url link'
     steps:
       - name: Deploy to Production
-        #download artifacts
         uses: actions/download-artifact@v4
         with:
           name: Staging-build
           path: dist/
 
-      # Download the target folder that was generated in the dbt_build job
+      # Download the target folder generated in the dbt_build job
       - name: Download New Target State
         uses: actions/download-artifact@v4
         with:
           name: dbt-target
           path: target/
 
-      # Now this path exists and can be uploaded for future slim CI runs
+      # Upload the new production manifest for future slim CI runs
       - name: Upload New Production Manifest
         uses: actions/upload-artifact@v4
         with:
