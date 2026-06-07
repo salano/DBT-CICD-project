@@ -63,3 +63,4 @@ On push to main branch. We can see the logs
 
 Need to update CICD pipeline workflow
 
+Push directly to main branch
