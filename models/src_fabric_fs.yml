@@ -1,0 +1,143 @@
+#Apply source validation tests
+sources:
+  - name: landing
+    description: The Fabric lakehouse for landing files and tables
+    database: lh_bronze
+    schema: bronze
+    #Testing for data freshness - Global/Set at table level for more granularity
+    freshness:
+      warn_after: { count: 1, period: day }
+      error_after: { count: 3, period: day }
+    #loaded_at_field: ValidFrom
+    tables:
+      - name: cust
+        description: The customers table in the landing lakehouse
+        identifier: clean_customers
+        columns:
+          - name: cust_id
+            tests:
+              - unique
+              - not_null
+              #- dbt_expectations.expect_column_to_exist
+          - name: Date_of_Birth
+            tests:
+              - not_null
+          - name: Gender
+            tests:
+              - not_null
+              - string_not_empty
+              - accepted_values:
+                  values: ["Male", "Female"]
+                  quote: true
+          - name: CustomerName
+            tests:
+              - not_null
+              - string_not_empty
+
+      - name: pol
+        description: The policies table in the landing lakehouse
+        identifier: clean_policies
+        columns:
+          - name: policy_id
+            tests:
+              - not_null
+              - unique
+          - name: cust_id
+            # Overrides the default for just this table
+            #loaded_at_field: updated_at
+            freshness:
+              warn_after: { count: 1, period: day }
+              error_after: { count: 1, period: day }
+            tests:
+              - not_null
+              - relationships:
+                  to: ref('cust')
+                  field: cust_id
+          - name: policy_type
+            tests:
+              - not_null
+              - string_not_empty
+              - accepted_values:
+                  values: ["Life", "Health", "Auto"]
+                  quote: true
+          - name: status
+            tests:
+              - not_null
+              - string_not_empty
+              - accepted_values:
+                  values: ["Active", "Inactive"]
+                  quote: true
+          - name: start_date
+            tests:
+              #- not_null
+              - no_future_dates
+          - name: end_date
+            tests:
+              - not_null
+              - no_future_dates
+          - name: coverage_amount
+            tests:
+              - not_null
+              - less_than_zero
+          - name: annual_premium
+            tests:
+              - not_null
+              - less_than_zero
+          - name: monthly_payment
+            tests:
+              - not_null
+              - less_than_zero
+          - name: distribution_channel
+            tests:
+              - not_null
+              - string_not_empty
+              - accepted_values:
+                  values: ["Online", "Broker", "Agent"]
+                  quote: true
+
+      - name: claims
+        description: The claims table in the landing lakehouse
+        identifier: clean_claims
+        columns:
+          - name: claim_id
+            tests:
+              - not_null
+              - unique
+          - name: policy_id
+            tests:
+              - not_null
+              - relationships:
+                  to: ref('pol')
+                  field: policy_id
+          - name: claim_date
+            tests:
+              - not_null
+              - no_future_dates
+          - name: status
+            tests:
+              - not_null
+              - string_not_empty
+          - name: gender
+            tests:
+              - not_null
+              - string_not_empty
+              - accepted_values:
+                  values: ["Male", "Female"]
+                  quote: true
+          - name: deductible
+            tests:
+              - not_null
+              - less_than_zero
+          - name: claim_reason
+            tests:
+              - not_null
+              - string_not_empty
+          - name: is_fraud
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["Yes", "No"]
+                  quote: true
+              #- dbt_utils.expression_is_true:
+              #  arguments:
+              #    expression: "date_parse(ValidFrom, '%Y-%m-%d %H:%i:%s') is not null"

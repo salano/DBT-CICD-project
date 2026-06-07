@@ -1,0 +1,151 @@
+name: dbt CI/CD
+#Controls when the action will run
+on:
+  #Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the actions tabs.
+  workflow_dispatch:
+# A workflow run is made up of jobs that runs sequentially
+jobs:
+  dbt_test:
+    name: Run dbt Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install dbt
+        run: pip install dbt-core dbt-fabric sqlfluff
+
+      - name: Install Microsoft ODBC
+        run: sudo ACCEPT_EULA=Y apt-get install msodbcsql18 -y
+
+      - name: Install dbt dependencies
+        run: dbt deps
+
+      - name: Run lint check on snapshots
+        run: sqlfluff lint snapshots --dialect tsql
+
+      - name: Run lint check on models
+        run: sqlfluff lint models --dialect tsql
+
+      - name: Execute dbt Tests
+        run: dbt test --profiles-dir ./
+        env:
+          DBT_FABRIC_SERVER: ${{ secrets.FABRIC_SERVER }}
+          DBT_FABRIC_TENANT_ID: ${{ secrets.FABRIC_TENANT_ID }}
+          DBT_FABRIC_CLIENT_ID: ${{ secrets.FABRIC_CLIENT_ID }}
+          DBT_FABRIC_CLIENT_SECRET: ${{ secrets.FABRIC_CLIENT_SECRET }}
+
+  dbt_build:
+    name: Build and Deploy dbt Models
+    runs-on: ubuntu-latest
+    needs: dbt_test # This job runs only if dbt_test passes.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history so dbt can compare states
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install dbt
+        run: pip install dbt-core dbt-fabric sqlfluff
+
+      - name: Install Microsoft ODBC
+        run: sudo ACCEPT_EULA=Y apt-get install msodbcsql18 -y
+
+      - name: Install dbt dependencies
+        run: dbt deps
+
+      - name: Download Production Manifest
+        uses: actions/download-artifact@v4
+        continue-on-error: true # Prevents the pipeline from breaking if it is the very first run
+        with:
+          name: prod-manifest
+          path: prod-manifest/
+
+      - name: run DBT build slim mode
+        run: dbt build --fail-fast --defer --state prod-manifest/ --select state:modified+ --empty --profiles-dir ./
+        #run: dbt build --fail-fast --defer --state prod-manifest/ --select state:modified+ --empty --profiles-dir ./
+
+        env:
+          DBT_PROFILES_DIR: .
+          DBT_FABRIC_SERVER: ${{ secrets.FABRIC_SERVER }}
+          DBT_FABRIC_TENANT_ID: ${{ secrets.FABRIC_TENANT_ID }}
+          DBT_FABRIC_CLIENT_ID: ${{ secrets.FABRIC_CLIENT_ID }}
+          DBT_FABRIC_CLIENT_SECRET: ${{ secrets.FABRIC_CLIENT_SECRET }}
+
+      # Share the generated manifest target folder with future deployment jobs
+      - name: Archive dbt Target Directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-target
+          path: target/
+
+  DeployDev:
+    name: Deploy to Development
+    if: github.event_name == 'pull_request'
+    needs: [dbt_build]
+    runs-on: ubuntu-latest
+    environment:
+      name: DEV
+      #url: 'optional url link'
+    steps:
+      - name: Deploy to Development
+        #upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Development-build
+          path: dist/
+
+  DeployStaging:
+    name: Deploy to Staging
+    if: github.ref == 'refs/heads/main'
+    needs: [dbt_build]
+    runs-on: ubuntu-latest
+    environment:
+      name: STAG
+      #url: 'optional url link'
+    steps:
+      - name: Deploying to Staging
+        #upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Staging-build
+          path: dist/
+
+  DeployProd:
+    name: Deploy to Production
+    needs: [DeployStaging]
+    runs-on: ubuntu-latest
+    environment:
+      name: Production
+      #url: 'optional url link'
+    steps:
+      - name: Deploy to Production
+        #download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Staging-build
+          path: dist/
+
+      # Download the target folder that was generated in the dbt_build job
+      - name: Download New Target State
+        uses: actions/download-artifact@v4
+        with:
+          name: dbt-target
+          path: target/
+
+      # Now this path exists and can be uploaded for future slim CI runs
+      - name: Upload New Production Manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-manifest
+          path: target/manifest.json

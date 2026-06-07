@@ -1,0 +1,48 @@
+models:
+  - name: gt_ins_claims
+    config:
+      contract:
+        enforced: true
+    description: This is the cleaned claims dataset for consumption by reports and analyst
+    columns:
+      - name: claim_id
+        data_type: string
+        description: Identifier for claims
+        constraints:
+          - type: not_null
+          - type: unique
+          #- type: primary_key # Not supported in Fabric Warehouse
+      - name: policy_id
+        data_type: string
+        description: Policy Id of the claim foreign key of policies table
+      - name: claim_date
+        data_type: date
+        description: date claim was recorded
+        tests:
+          - not_null
+      - name: claim_amount
+        data_type: float
+        description: The dollar amount of the claim
+        tests:
+          - less_than_zero
+      - name: status
+        data_type: string
+        description: Status of a claim - Approved, Pending, Rejected
+      - name: gender
+        data_type: string
+        description: Gender of Claimant - Male or Female
+      - name: deductible
+        data_type: float
+        description: Money paying out of pocket before insurance pays
+      - name: claim_reason
+        data_type: string
+        description: Reason for the claim - Theft, fire
+      - name: is_fraud
+        data_type: string
+        description: Whether claim is fraudulent or not
+      - name: Zip_Code
+        data_type: string
+        description: Geographic area claim was made
+      - name: last_updated
+        data_type: datetime2(6)
+        description: Last modify date of table
