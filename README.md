@@ -1,4 +1,4 @@
-This project was created as supplementary project for the Microsoft Fabric Insurance Project which can be found [here](https://github.com/salano/MS-Fabric-End-to-End-Insurance-Project)
+This Data Build Tool (DBT) Continuous Integration, Continuous Delivery (CI/CD) project was created as supplementary project for the Microsoft Fabric Insurance Project which can be found [here](https://github.com/salano/MS-Fabric-End-to-End-Insurance-Project)
 
 We created a DBT project to validate and transform the data for the silver and gold layers in medallion architecture of the Microsoft Fabric project. It uses the Slowly Changing Dimensio (SCD) type data modelling technique to model the dimension tables in this layer.
 
@@ -23,7 +23,7 @@ In the DBT project we do the following:
   - Test date fields have no future date values
 - Linting test
 
-The DBT projec:
+The DBT project:
 
 ![ALT](dbt_project_01_ann.png)
 ![ALT](dbt_project_02_ann.png)
@@ -44,12 +44,24 @@ We will perform the followin in the pipeline
 ![ALT](sqlfluff_config_01.png)
 ![ALT](sqlfluff_config_02.png)
 
-The CI Pipeline
+The CI/CD Pipeline
 
 ![ALT](cicd_01.png)
 ![ALT](cicd_02.png)
 ![ALT](cicd_03.png)
 ![ALT](cicd_04.png)
+![ALT](cicd_05.png)
+![ALT](cicd_06.png)
+![ALT](cicd_07.png)
+![ALT](cicd_08.png)
+
+In Github, we add environments for development, staging/testing/QA, and production. Each representing the stages of our Continuous Integration, Continuous Delivery pipeline.
+
+![ALT](Github_Environments.png)
+
+We set up environment secrets for each environment. These will take precedents over the repository secrets for each environment and should be specific to the environment.
+
+![ALT](Environment_secrets.png)
 
 We set the repository secret variables to execute the GitHub runner.
 
@@ -57,10 +69,20 @@ We set the repository secret variables to execute the GitHub runner.
 
 On push to main branch. We can see the logs
 
-![AL](cicd_success.png)
-![ALT](cicd_test.png)
-![ALT](cicd_slim_success.png)
+After, the DBT tests and build jobs, we progress to the staging and then the production environments. Ideally, we should protect the production environment and add the appropiate reviewers in a production environment.
 
-Need to update CICD pipeline workflow
+![AL](cicd_push_to_main.png)
+![ALT](cicd_dbt_test.png)
+![ALT](cicd_dbt_run.png)
 
-Push directly to main branch
+On a merge to main branch from a feature branch pull request. We can see the logs
+After, the DBT tests and build jobs, we progress to the developement environment for code merging and review.
+
+Create a feature branch and create a pull request
+
+![ALT](cicd_pull_request.png)
+![ALT](cicd_create_pull_request.png)
+
+After successfully merging the feature branch into the main branch triggers a deployment to the staging environment.
+
+![ALT](pull_request_success.png)
